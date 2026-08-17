@@ -32,3 +32,8 @@ web-ext.config.ts
 *.sln
 *.sw?
 .gstack/
+
+# ITP 判定台账（本地产物；config.json 需要提交）
+.itp/data/
+.itp/index.html
+.itp/state.json

@@ -633,7 +633,8 @@ button { cursor: pointer; }
   position: relative;
   z-index: 3;
   display: flex;
-  align-items: center;
+  /* 追问框会随内容长高，按钮跟着底部走 */
+  align-items: flex-end;
   gap: 6px;
   padding: 9px 11px 11px;
   border-top: 1px solid var(--rule);
@@ -650,6 +651,12 @@ button { cursor: pointer; }
   background: var(--sheet);
   color: var(--ink);
   font-size: 13px;
+  /* 多行输入：高度由脚本按内容算，到上限后内部滚动 */
+  max-height: 116px;
+  overflow-y: auto;
+  resize: none;
+  font-family: inherit;
+  line-height: 1.55;
   transition: border-color 0.18s var(--ease), box-shadow 0.18s var(--ease);
 }
 .icon-btn.send { color: var(--accent); }
@@ -765,3 +772,137 @@ button { cursor: pointer; }
   * { animation: none !important; transition: none !important; }
   .reader { scroll-behavior: auto; }
 }
+
+/* ── 最近材料 ───────────────────────────────────────────── */
+.recent {
+  overflow: hidden;
+  border: 1px solid var(--rule);
+  border-radius: 11px;
+  background: color-mix(in srgb, var(--sheet) 60%, transparent);
+}
+.recent-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  min-height: 40px;
+  padding: 6px 10px 6px 12px;
+  border: 0;
+  background: transparent;
+  color: var(--ink);
+  text-align: left;
+}
+.recent-toggle > span { display: flex; align-items: baseline; min-width: 0; gap: 8px; }
+.recent-toggle strong { flex: none; font-family: var(--serif); font-size: 13px; font-weight: 600; }
+.recent-toggle small { color: var(--ink-faint); font-size: 10.5px; }
+.recent-toggle svg { flex: none; color: var(--ink-faint); transition: transform 0.2s var(--ease); }
+.recent.open .recent-toggle svg { transform: rotate(180deg); }
+.recent-body {
+  max-height: 260px;
+  padding: 2px 8px 8px;
+  overflow-y: auto;
+  border-top: 1px dashed var(--rule);
+}
+.recent-group {
+  margin: 8px 4px 4px;
+  color: var(--ink-faint);
+  font-family: var(--mono);
+  font-size: 9px;
+  letter-spacing: 0.1em;
+}
+.recent-row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  border-radius: 8px;
+}
+.recent-row:hover { background: var(--inset); }
+.recent-main {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+  gap: 1px;
+  padding: 7px 8px;
+  border: 0;
+  background: transparent;
+  color: var(--ink);
+  text-align: left;
+}
+.recent-main strong {
+  overflow: hidden;
+  font-size: 12.5px;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.recent-main small { color: var(--ink-faint); font-size: 10px; }
+.recent-main:disabled { opacity: 0.55; }
+.recent-del {
+  flex: none;
+  padding: 4px 7px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--ink-faint);
+  font-size: 10.5px;
+}
+.recent-del:hover { background: var(--cinnabar-tint); color: var(--cinnabar); }
+
+/* ── 工具轨迹（可展开）────────────────────────────────────── */
+.trace-item { width: 100%; }
+.trace-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 2px 7px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--inset);
+  color: var(--ink-soft);
+  font-family: var(--mono);
+  font-size: 9px;
+}
+.trace-chip:disabled { opacity: 0.75; }
+.trace-chip.running { color: var(--warn-fg); }
+.trace-chip.done { color: var(--accent); }
+.trace-chip.error { color: var(--error-fg); }
+.trace-chip em { color: var(--ink-faint); font-style: normal; }
+.trace-detail {
+  margin: 5px 0 3px;
+  padding: 7px 9px;
+  border-radius: 8px;
+  background: var(--sheet);
+}
+.trace-detail small {
+  display: block;
+  margin-bottom: 3px;
+  color: var(--ink-faint);
+  font-family: var(--mono);
+  font-size: 9px;
+  letter-spacing: 0.08em;
+}
+.trace-detail pre {
+  max-height: 190px;
+  margin: 0 0 7px;
+  overflow: auto;
+  color: var(--ink-soft);
+  font-family: var(--mono);
+  font-size: 10px;
+  line-height: 1.5;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+.trace-detail pre:last-child { margin-bottom: 0; }
+
+/* 材料头部的轻量操作（重新索引等）*/
+.inline-action {
+  padding: 1px 7px;
+  border: 1px solid var(--rule);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--ink-soft);
+  font-size: 10px;
+}
+.inline-action:hover:not(:disabled) { border-color: var(--accent); color: var(--accent); }
+.inline-action:disabled { opacity: 0.5; }

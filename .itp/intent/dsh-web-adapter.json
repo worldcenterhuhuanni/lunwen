@@ -1,0 +1,58 @@
+{
+  "itp_version": "1",
+  "change": "dsh-web-adapter",
+  "theme": {
+    "text": "DeepSeek Harness 网页桥适配器",
+    "source": "document",
+    "ts": "2026-08-15T19:08:14+08:00",
+    "history": []
+  },
+  "requirements": [
+    {
+      "id": "R1",
+      "statement": "dsh 可经网页桥使用 DeepSeek 网页会话",
+      "anchors": [],
+      "anchor_level": 0,
+      "scenarios": [
+        {
+          "id": "R1.S1",
+          "when": "",
+          "then": ""
+        },
+        {
+          "id": "R1.S2",
+          "when": "",
+          "then": ""
+        },
+        {
+          "id": "R1.S3",
+          "when": "",
+          "then": ""
+        },
+        {
+          "id": "R1.S4",
+          "when": "",
+          "then": ""
+        },
+        {
+          "id": "R1.S5",
+          "when": "",
+          "then": ""
+        }
+      ],
+      "source": "document",
+      "status": "active",
+      "evidence": "",
+      "ts": "2026-08-15T19:58:08+08:00"
+    }
+  ],
+  "revisions": [
+    {
+      "ts": "2026-08-15T19:58:08+08:00",
+      "op": "add",
+      "target": "R1",
+      "reason": "文档新增",
+      "evidence": ""
+    }
+  ]
+}

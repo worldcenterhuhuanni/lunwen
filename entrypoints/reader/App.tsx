@@ -7,12 +7,25 @@ import {
 import { MarkdownLite } from '@/entrypoints/sidepanel/MarkdownLite';
 import { IconClose } from '@/entrypoints/sidepanel/icons';
 import { browser } from 'wxt/browser';
+import { ParallelView } from './ParallelView';
 
 function readIdFromLocation() {
   return new URLSearchParams(window.location.search).get('id')?.trim() || '';
 }
 
+/** 对照视图直接按会话读数据，不走 storage.session 的临时载荷。 */
+function readParallelSession() {
+  const params = new URLSearchParams(window.location.search);
+  return params.get('view') === 'parallel' ? params.get('session')?.trim() || '' : '';
+}
+
 export default function App() {
+  const parallelSessionId = readParallelSession();
+  if (parallelSessionId) return <ParallelView sessionId={parallelSessionId} />;
+  return <DocumentView />;
+}
+
+function DocumentView() {
   const [doc, setDoc] = useState<ReaderDocument | null>(null);
   const [status, setStatus] = useState<'loading' | 'ready' | 'missing'>('loading');
   const [decision, setDecision] = useState<'idle' | 'sending' | 'error'>('idle');

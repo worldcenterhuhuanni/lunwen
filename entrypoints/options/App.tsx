@@ -249,7 +249,7 @@ export default function App() {
         <label className="toggle-row">
           <span>
             <strong>独立大窗口</strong>
-            <small>默认关闭：设置与放大阅读留在侧栏/系统页。开启后跳到居中独立大窗。</small>
+            <small>默认关闭：原文对照在新标签页全宽打开，设置走系统页。开启后两者都跳到居中独立大窗。</small>
           </span>
           <input
             type="checkbox"

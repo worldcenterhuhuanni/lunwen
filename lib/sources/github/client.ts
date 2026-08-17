@@ -1,7 +1,8 @@
 import type { Material } from '../../material/types';
 import { throwIfAborted } from '../../abort';
 import { buildWorkspace } from '../../workspace/indexer';
-import { saveWorkspace } from '../../workspace/store';
+import { getWorkspace, saveWorkspace } from '../../workspace/store';
+import type { ProjectStats } from '../../material/types';
 import type { WorkspaceBuildLimits, WorkspaceCandidate } from '../../workspace/types';
 import { pathExclusionReason } from '../../workspace/filters';
 
@@ -156,6 +157,25 @@ async function importViaTree(
   return candidates;
 }
 
+function githubMaterial(
+  info: GitHubRepoInfo,
+  sha: string,
+  workspaceId: string,
+  stats: ProjectStats,
+): Material {
+  return {
+    mode: 'github',
+    kind: 'github',
+    title: info.full_name,
+    source: info.html_url,
+    text: `公开仓库 ${info.full_name}，默认分支 ${info.default_branch}，提交 ${sha}。源码已建立文件级本地索引。`,
+    workspaceId,
+    version: sha,
+    stats,
+    writable: false,
+  };
+}
+
 export async function importGitHubRepository(
   input: string,
   limits: WorkspaceBuildLimits,
@@ -171,6 +191,16 @@ export async function importGitHubRepository(
     `/repos/${owner}/${repo}/commits/${encodeURIComponent(info.default_branch)}`,
     signal,
   );
+
+  // workspaceId 已经是 owner/repo@sha 的内容寻址，同一提交的索引可以直接复用，
+  // 省掉整个下载 + 解压 + 建索引链路。
+  const cachedId = `github:${info.full_name.toLowerCase()}:${commit.sha}`;
+  const cached = await getWorkspace(cachedId);
+  if (cached) {
+    onProgress?.('复用已有源码索引…');
+    return githubMaterial(info, commit.sha, cachedId, cached.stats);
+  }
+
   let candidates: WorkspaceCandidate[];
   if (info.size * 1024 > limits.maxArchiveBytes * 4) {
     candidates = await importViaTree(owner, repo, commit.sha, limits, onProgress, signal);
@@ -195,9 +225,8 @@ export async function importGitHubRepository(
       }
     }
   }
-  const workspaceId = `github:${info.full_name.toLowerCase()}:${commit.sha}`;
   const result = await buildWorkspace(candidates, {
-    id: workspaceId,
+    id: cachedId,
     mode: 'github',
     title: info.full_name,
     source: info.html_url,
@@ -210,15 +239,5 @@ export async function importGitHubRepository(
   onProgress?.('正在保存本地源码索引…');
   await saveWorkspace(result, signal);
 
-  return {
-    mode: 'github',
-    kind: 'github',
-    title: info.full_name,
-    source: info.html_url,
-    text: `公开仓库 ${info.full_name}，默认分支 ${info.default_branch}，提交 ${commit.sha}。源码已建立文件级本地索引。`,
-    workspaceId,
-    version: commit.sha,
-    stats: result.workspace.stats,
-    writable: false,
-  };
+  return githubMaterial(info, commit.sha, cachedId, result.workspace.stats);
 }

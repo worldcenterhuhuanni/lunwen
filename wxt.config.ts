@@ -20,7 +20,7 @@ export default defineConfig({
     description:
       '分析论文、GitHub 公开仓库和本地工作区；支持受控源码检索、Diff 确认写回与多种模型通路。',
     // sidePanel 由 sidepanel 入口自动配置;这里补齐运行所需权限。
-    permissions: ['storage', 'tabs', 'scripting', 'sidePanel', 'windows'],
+    permissions: ['storage', 'tabs', 'scripting', 'sidePanel', 'windows', 'contextMenus'],
     host_permissions: ['<all_urls>', 'https://chat.deepseek.com/*'],
     action: {}, // 工具栏图标,点击打开侧边栏
   },

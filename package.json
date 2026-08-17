@@ -14,6 +14,7 @@
     "dev:firefox": "wxt -b firefox",
     "build": "wxt build",
     "build:firefox": "wxt build -b firefox",
+    "pack": "wxt zip",
     "zip": "wxt zip",
     "zip:firefox": "wxt zip -b firefox",
     "compile": "tsc --noEmit",
@@ -35,6 +36,7 @@
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
     "@wxt-dev/module-react": "^1.1.5",
+    "fake-indexeddb": "^6.2.5",
     "typescript": "^5.9.3",
     "vitest": "^4.1.10",
     "wxt": "^0.20.27"

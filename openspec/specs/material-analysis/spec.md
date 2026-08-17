@@ -1,7 +1,7 @@
 # material-analysis Specification
 
 ## Purpose
-TBD - created by archiving change multi-mode-analysis. Update Purpose after archive.
+定义论文、GitHub 项目与本地工作区三种分析模式的核心行为：来源导入、源码索引的安全边界与资源上限、按需取证分析，以及确认后才写回本地文件。
 ## Requirements
 ### Requirement: 三种分析模式
 

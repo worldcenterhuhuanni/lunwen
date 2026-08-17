@@ -95,16 +95,20 @@ export function extractFromHtml(html: string, url: string): Paper {
   };
 }
 
-export function extractFromPlainText(text: string): Paper {
+export function extractFromPlainText(
+  text: string,
+  /** 划词解读时带上来源页面，便于回溯出处。 */
+  origin?: { source?: string; title?: string },
+): Paper {
   const body = text.trim();
   if (!body) throw new Error('请先粘贴要解读的文字。');
   const title = body.replace(/\s+/g, ' ').slice(0, 48) + (body.length > 48 ? '…' : '');
   return {
     mode: 'paper',
     kind: 'html',
-    title: title || '粘贴文本',
+    title: origin?.title || title || '粘贴文本',
     text: body,
-    source: 'clipboard:paste',
+    source: origin?.source || 'clipboard:paste',
   };
 }
 

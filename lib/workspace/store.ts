@@ -5,47 +5,19 @@ import type {
   WorkspaceRecord,
 } from './types';
 import { throwIfAborted, yieldToMain } from '../abort';
-
-const DB_NAME = 'material-analysis';
-const DB_VERSION = 1;
-const WORKSPACES = 'workspaces';
-const FILES = 'files';
+import {
+  DOCUMENTS,
+  FILES,
+  SESSIONS,
+  WORKSPACES,
+  deleteByIndex,
+  openDb,
+  requestResult,
+  transactionDone,
+} from '../db';
 
 function fileKey(workspaceId: string, path: string): string {
   return `${workspaceId}\0${path}`;
-}
-
-function openDb(): Promise<IDBDatabase> {
-  return new Promise((resolve, reject) => {
-    const request = indexedDB.open(DB_NAME, DB_VERSION);
-    request.onerror = () => reject(request.error);
-    request.onupgradeneeded = () => {
-      const db = request.result;
-      if (!db.objectStoreNames.contains(WORKSPACES)) {
-        db.createObjectStore(WORKSPACES, { keyPath: 'id' });
-      }
-      if (!db.objectStoreNames.contains(FILES)) {
-        const store = db.createObjectStore(FILES, { keyPath: 'key' });
-        store.createIndex('workspaceId', 'workspaceId', { unique: false });
-      }
-    };
-    request.onsuccess = () => resolve(request.result);
-  });
-}
-
-function requestResult<T>(request: IDBRequest<T>): Promise<T> {
-  return new Promise((resolve, reject) => {
-    request.onerror = () => reject(request.error);
-    request.onsuccess = () => resolve(request.result);
-  });
-}
-
-function transactionDone(tx: IDBTransaction): Promise<void> {
-  return new Promise((resolve, reject) => {
-    tx.oncomplete = () => resolve();
-    tx.onerror = () => reject(tx.error);
-    tx.onabort = () => reject(tx.error ?? new Error('IndexedDB 事务已取消'));
-  });
 }
 
 export async function saveWorkspace(
@@ -69,22 +41,11 @@ export async function saveWorkspace(
     throwIfAborted(signal);
     workspaces.put(result.workspace);
 
-    const existing = files.index('workspaceId').openKeyCursor(IDBKeyRange.only(result.workspace.id));
-    await new Promise<void>((resolve, reject) => {
-      existing.onerror = () => reject(existing.error);
-      existing.onsuccess = () => {
-        const cursor = existing.result;
-        if (!cursor) {
-          for (const file of result.files) {
-            files.put({ ...file, key: fileKey(file.workspaceId, file.path) });
-          }
-          resolve();
-          return;
-        }
-        files.delete(cursor.primaryKey);
-        cursor.continue();
-      };
-    });
+    // 重建索引时先清掉同工作区的旧文件行，避免删掉的文件残留成幽灵。
+    await deleteByIndex(files, 'workspaceId', result.workspace.id);
+    for (const file of result.files) {
+      files.put({ ...file, key: fileKey(file.workspaceId, file.path) });
+    }
     await transactionDone(tx);
     throwIfAborted(signal);
   } catch (error) {
@@ -103,6 +64,35 @@ export async function getWorkspace(id: string): Promise<WorkspaceRecord | null> 
   await transactionDone(tx);
   db.close();
   return (value as WorkspaceRecord | undefined) ?? null;
+}
+
+export async function listWorkspaces(): Promise<WorkspaceRecord[]> {
+  const db = await openDb();
+  const tx = db.transaction(WORKSPACES, 'readonly');
+  const rows = await requestResult(tx.objectStore(WORKSPACES).getAll());
+  await transactionDone(tx);
+  db.close();
+  return (rows as WorkspaceRecord[]).sort((a, b) => b.createdAt - a.createdAt);
+}
+
+/**
+ * 删除工作区及其全部文件行和引用它的会话。
+ * 三者必须同一事务：否则中途失败会留下查不到工作区、却仍占着空间的孤儿文件行。
+ */
+export async function deleteWorkspace(id: string): Promise<void> {
+  const db = await openDb();
+  const tx = db.transaction([WORKSPACES, FILES, SESSIONS, DOCUMENTS], 'readwrite');
+  const sessions = tx.objectStore(SESSIONS);
+  // 文档以 sessionId 为主键，所以先取出这些会话的键，再顺手删掉它们的对照原文。
+  const sessionKeys = await requestResult(
+    sessions.index('workspaceId').getAllKeys(IDBKeyRange.only(id)),
+  );
+  for (const key of sessionKeys) tx.objectStore(DOCUMENTS).delete(key);
+  tx.objectStore(WORKSPACES).delete(id);
+  await deleteByIndex(tx.objectStore(FILES), 'workspaceId', id);
+  await deleteByIndex(sessions, 'workspaceId', id);
+  await transactionDone(tx);
+  db.close();
 }
 
 export async function listWorkspaceFiles(workspaceId: string): Promise<WorkspaceFile[]> {

@@ -1,0 +1,197 @@
+{
+  "itp_version": "1",
+  "change": "reading-history-and-capture",
+  "theme": {
+    "text": "解读历史、索引复用与划词入口",
+    "source": "document",
+    "ts": "2026-08-15T15:09:03+08:00",
+    "history": []
+  },
+  "requirements": [
+    {
+      "id": "R1",
+      "statement": "划词解读入口",
+      "anchors": [],
+      "anchor_level": 0,
+      "scenarios": [
+        {
+          "id": "R1.S1",
+          "when": "",
+          "then": ""
+        },
+        {
+          "id": "R1.S2",
+          "when": "",
+          "then": ""
+        },
+        {
+          "id": "R1.S3",
+          "when": "",
+          "then": ""
+        },
+        {
+          "id": "R1.S4",
+          "when": "",
+          "then": ""
+        }
+      ],
+      "source": "document",
+      "status": "active",
+      "evidence": "",
+      "ts": "2026-08-15T15:09:03+08:00"
+    },
+    {
+      "id": "R2",
+      "statement": "多行追问输入",
+      "anchors": [],
+      "anchor_level": 0,
+      "scenarios": [
+        {
+          "id": "R2.S1",
+          "when": "",
+          "then": ""
+        },
+        {
+          "id": "R2.S2",
+          "when": "",
+          "then": ""
+        }
+      ],
+      "source": "document",
+      "status": "active",
+      "evidence": "",
+      "ts": "2026-08-15T15:09:03+08:00"
+    },
+    {
+      "id": "R3",
+      "statement": "工具轨迹可展开",
+      "anchors": [],
+      "anchor_level": 0,
+      "scenarios": [
+        {
+          "id": "R3.S1",
+          "when": "",
+          "then": ""
+        },
+        {
+          "id": "R3.S2",
+          "when": "",
+          "then": ""
+        }
+      ],
+      "source": "document",
+      "status": "active",
+      "evidence": "",
+      "ts": "2026-08-15T15:09:03+08:00"
+    },
+    {
+      "id": "R4",
+      "statement": "解读会话持久化",
+      "anchors": [],
+      "anchor_level": 0,
+      "scenarios": [
+        {
+          "id": "R4.S1",
+          "when": "",
+          "then": ""
+        },
+        {
+          "id": "R4.S2",
+          "when": "",
+          "then": ""
+        },
+        {
+          "id": "R4.S3",
+          "when": "",
+          "then": ""
+        },
+        {
+          "id": "R4.S4",
+          "when": "",
+          "then": ""
+        }
+      ],
+      "source": "document",
+      "status": "active",
+      "evidence": "",
+      "ts": "2026-08-15T15:09:03+08:00"
+    },
+    {
+      "id": "R5",
+      "statement": "历史材料列表",
+      "anchors": [],
+      "anchor_level": 0,
+      "scenarios": [
+        {
+          "id": "R5.S1",
+          "when": "",
+          "then": ""
+        },
+        {
+          "id": "R5.S2",
+          "when": "",
+          "then": ""
+        },
+        {
+          "id": "R5.S3",
+          "when": "",
+          "then": ""
+        }
+      ],
+      "source": "document",
+      "status": "active",
+      "evidence": "",
+      "ts": "2026-08-15T15:09:03+08:00"
+    },
+    {
+      "id": "R6",
+      "statement": "已建索引可复用",
+      "anchors": [],
+      "anchor_level": 0,
+      "scenarios": [
+        {
+          "id": "R6.S1",
+          "when": "",
+          "then": ""
+        },
+        {
+          "id": "R6.S2",
+          "when": "",
+          "then": ""
+        },
+        {
+          "id": "R6.S3",
+          "when": "",
+          "then": ""
+        }
+      ],
+      "source": "document",
+      "status": "active",
+      "evidence": "",
+      "ts": "2026-08-15T15:09:03+08:00"
+    },
+    {
+      "id": "R7",
+      "statement": "索引新鲜度可见",
+      "anchors": [],
+      "anchor_level": 0,
+      "scenarios": [
+        {
+          "id": "R7.S1",
+          "when": "",
+          "then": ""
+        },
+        {
+          "id": "R7.S2",
+          "when": "",
+          "then": ""
+        }
+      ],
+      "source": "document",
+      "status": "active",
+      "evidence": "",
+      "ts": "2026-08-15T15:09:03+08:00"
+    }
+  ],
+  "revisions": []
+}

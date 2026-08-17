@@ -262,7 +262,7 @@ export default defineContentScript({
     function findFileInput(): HTMLInputElement | null {
       const inputs = Array.from(document.querySelectorAll('input[type="file"]')) as HTMLInputElement[];
       return (
-        inputs.find((i) => !i.disabled && (i.accept === '' || /pdf|\*/i.test(i.accept))) ??
+        inputs.find((i) => !i.disabled && (i.accept === '' || /pdf|text|md|\*/i.test(i.accept))) ??
         inputs[0] ??
         null
       );
@@ -288,10 +288,10 @@ export default defineContentScript({
 
     /** 等文件出现且不再「解析中/上传中」;若出现解析失败立即抛错 */
     async function waitFileParsed(fileName: string, post: (msg: unknown) => void) {
-      const hint = fileName.replace(/\.pdf$/i, '').slice(0, 18);
+      const hint = fileName.replace(/\.[a-z0-9]+$/i, '').slice(0, 18);
       const start = Date.now();
       let sawChip = false;
-      post({ type: 'progress', message: '等待 DeepSeek 解析 PDF…' });
+      post({ type: 'progress', message: '等待 DeepSeek 解析附件…' });
 
       while (Date.now() - start < 120_000) {
         if (cancelled) throw new DOMException('Aborted', 'AbortError');
@@ -312,7 +312,7 @@ export default defineContentScript({
           await sleep(1200);
           throwIfPageError();
           if (!BUSY_HINT.test(document.body?.innerText || '')) {
-            post({ type: 'progress', message: 'PDF 已就绪,准备发送…' });
+            post({ type: 'progress', message: '附件已就绪,准备发送…' });
             return;
           }
         }
@@ -321,38 +321,49 @@ export default defineContentScript({
 
       if (!sawChip) {
         throw new Error(
-          '未检测到 PDF 已挂到 DeepSeek。页面附件控件可能改版,请刷新后重试,或改用侧栏「上传 PDF」。',
+          '未检测到附件已挂到 DeepSeek。页面附件控件可能改版,请刷新后重试,或改用侧栏「上传 PDF」。',
         );
       }
-      throw new Error('等待 DeepSeek 解析 PDF 超时(2 分钟)。请到网页查看附件是否仍在转圈。');
+      throw new Error('等待 DeepSeek 解析附件超时(2 分钟)。请到网页查看附件是否仍在转圈。');
     }
 
-    async function attachPdfFile(
+    /** PDF 有魔数可校验;文本类附件(dsh 上下文走 .md)只能校验非空与长度一致。 */
+    function isPdfAttachment(meta: { name: string; mime: string }): boolean {
+      return /pdf/i.test(meta.mime) || /\.pdf$/i.test(meta.name);
+    }
+
+    async function attachFile(
       fileMeta: { name: string; mime: string; dataBase64: string; byteLength: number },
       post: (msg: unknown) => void,
     ) {
-      // Base64 → 真实字节;校验体积,杜绝再出现 15B 的 "[object Object]" 假 PDF
-      if (!fileMeta.dataBase64 || fileMeta.byteLength < 1024) {
-        throw new Error(`收到的 PDF 数据异常(${fileMeta.byteLength || 0}B)。传输失败,请重试。`);
+      const isPdf = isPdfAttachment(fileMeta);
+      // PDF 有 1KB 下限;.md 上下文可能只有几百字节,只要求非空。
+      const minBytes = isPdf ? 1024 : 1;
+      if (!fileMeta.dataBase64 || fileMeta.byteLength < minBytes) {
+        throw new Error(`收到的附件数据异常(${fileMeta.byteLength || 0}B)。传输失败,请重试。`);
       }
       const binary = atob(fileMeta.dataBase64);
-      if (binary.length < 1024 || binary.slice(0, 5) !== '%PDF-') {
+      // 魔数校验只对 PDF 有意义,但必须保留:它拦的是 "[object Object]" 那类 15B 假文件。
+      if (isPdf && (binary.length < 1024 || binary.slice(0, 5) !== '%PDF-')) {
         throw new Error(`PDF 解码后无效(大小=${binary.length},头=${JSON.stringify(binary.slice(0, 8))})。`);
       }
+      if (binary.length < minBytes) {
+        throw new Error(`附件解码后为空(声明 ${fileMeta.byteLength}B)。`);
+      }
       if (Math.abs(binary.length - fileMeta.byteLength) > 16) {
-        throw new Error(`PDF 大小不一致:声明 ${fileMeta.byteLength}B,解码 ${binary.length}B。`);
+        throw new Error(`附件大小不一致:声明 ${fileMeta.byteLength}B,解码 ${binary.length}B。`);
       }
       const bytes = new Uint8Array(binary.length);
       for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
 
       const file = new File([bytes], fileMeta.name, {
-        type: fileMeta.mime || 'application/pdf',
+        type: fileMeta.mime || (isPdf ? 'application/pdf' : 'text/markdown'),
       });
-      if (file.size < 1024) {
+      if (file.size < minBytes) {
         throw new Error(`挂载前 File.size=${file.size}B,异常。`);
       }
 
-      post({ type: 'progress', message: `正在挂载 PDF(${(file.size / 1024 / 1024).toFixed(1)}MB)…` });
+      post({ type: 'progress', message: `正在挂载附件(${(file.size / 1024).toFixed(0)}KB)…` });
 
       let input = findFileInput();
       if (!input) {
@@ -414,7 +425,10 @@ export default defineContentScript({
       let sawChange = false;
       let last = '';
       let stableTicks = 0;
+      let lastBeatAt = Date.now();
       const STABLE_NEED = 5;
+      /** 心跳间隔要远小于扩展侧 3 分钟的空闲判死阈值。 */
+      const HEARTBEAT_MS = 15_000;
 
       while (Date.now() - start < 600_000) {
         if (cancelled) throw new DOMException('Aborted', 'AbortError');
@@ -429,6 +443,7 @@ export default defineContentScript({
           if (cur !== last) {
             last = cur;
             stableTicks = 0;
+            lastBeatAt = Date.now();
             post({ type: 'delta', text: cur });
           } else if (!isGenerating()) {
             stableTicks += 1;
@@ -445,6 +460,17 @@ export default defineContentScript({
             post({ type: 'done' });
             return;
           }
+        }
+
+        // 深度思考阶段回复容器还是空的，一个 delta 都发不出来；此时页面确实在生成，
+        // 必须定期报活，否则扩展侧会按「3 分钟没有新内容」把还在思考的请求判死。
+        // 反过来，页面既没在生成又没有变化时故意不报活，让那条超时如实触发。
+        if (!growing && isGenerating() && Date.now() - lastBeatAt >= HEARTBEAT_MS) {
+          lastBeatAt = Date.now();
+          post({
+            type: 'progress',
+            message: `DeepSeek 正在思考…已等待 ${Math.round((Date.now() - start) / 1000)} 秒`,
+          });
         }
       }
       if (last) {
@@ -475,7 +501,7 @@ export default defineContentScript({
         }
 
         if (file?.dataBase64) {
-          await attachPdfFile(file, post);
+          await attachFile(file, post);
         }
 
         const before = latestAssistant();

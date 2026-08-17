@@ -2,7 +2,7 @@ import type { Material } from '../../material/types';
 import { throwIfAborted } from '../../abort';
 import { pathExclusionReason } from '../../workspace/filters';
 import { buildWorkspace } from '../../workspace/indexer';
-import { saveWorkspace } from '../../workspace/store';
+import { getWorkspace, saveWorkspace } from '../../workspace/store';
 import type { WorkspaceBuildLimits, WorkspaceCandidate } from '../../workspace/types';
 
 async function* walkDirectory(
@@ -60,17 +60,17 @@ export function supportsDirectoryPicker(): boolean {
   return typeof window.showDirectoryPicker === 'function';
 }
 
-export async function importLocalDirectory(
+/** 首次导入与重新索引共用：给定目录句柄和工作区标识，重建一次完整索引。 */
+async function indexDirectoryHandle(
+  root: FileSystemDirectoryHandle,
+  workspaceId: string,
   limits: WorkspaceBuildLimits,
   onProgress?: (message: string) => void,
   signal?: AbortSignal,
 ): Promise<Material> {
-  if (!window.showDirectoryPicker) throw new Error('当前浏览器不支持可写目录授权，请使用只读目录导入。');
-  const root = await window.showDirectoryPicker({ mode: 'readwrite' });
   throwIfAborted(signal);
   onProgress?.(`正在扫描 ${root.name}…`);
   const writable = (await root.queryPermission({ mode: 'readwrite' })) !== 'denied';
-  const workspaceId = `local:${crypto.randomUUID()}`;
   const result = await buildWorkspace(walkDirectory(root, limits.ignorePatterns, signal), {
     id: workspaceId,
     mode: 'local',
@@ -85,6 +85,38 @@ export async function importLocalDirectory(
   onProgress?.('正在保存本地源码索引…');
   await saveWorkspace(result, signal);
   return localMaterial(root.name, workspaceId, result, writable);
+}
+
+export async function importLocalDirectory(
+  limits: WorkspaceBuildLimits,
+  onProgress?: (message: string) => void,
+  signal?: AbortSignal,
+): Promise<Material> {
+  if (!window.showDirectoryPicker) throw new Error('当前浏览器不支持可写目录授权，请使用只读目录导入。');
+  const root = await window.showDirectoryPicker({ mode: 'readwrite' });
+  return indexDirectoryHandle(root, `local:${crypto.randomUUID()}`, limits, onProgress, signal);
+}
+
+/**
+ * 用已持久化的目录句柄重建索引，沿用原工作区标识。
+ * 「重新索引」和「复用历史本地工作区」是同一件事：都要重新读盘确认内容没过期。
+ */
+export async function reindexLocalWorkspace(
+  workspaceId: string,
+  limits: WorkspaceBuildLimits,
+  onProgress?: (message: string) => void,
+  signal?: AbortSignal,
+): Promise<Material> {
+  const record = await getWorkspace(workspaceId);
+  if (!record) throw new Error('本地索引已失效，请重新选择目录。');
+  const root = record.rootHandle;
+  if (!root) throw new Error('该工作区当初是只读导入的，没有目录授权，请重新选择文件夹。');
+  onProgress?.('正在确认目录授权…');
+  let permission = await root.queryPermission({ mode: 'readwrite' });
+  // 权限只在用户手势里才能重新申请，所以这条路径必须由按钮点击触发。
+  if (permission !== 'granted') permission = await root.requestPermission({ mode: 'readwrite' });
+  if (permission !== 'granted') throw new Error('目录授权已失效，请重新选择该文件夹。');
+  return indexDirectoryHandle(root, workspaceId, limits, onProgress, signal);
 }
 
 export async function importLocalFileList(

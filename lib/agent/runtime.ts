@@ -18,7 +18,14 @@ export interface ProjectAgentCallbacks {
   signal?: AbortSignal;
   onText?: (delta: string) => void;
   onFinal?: (text: string) => void;
-  onTool?: (event: { name: string; status: 'running' | 'done' | 'error' }) => void;
+  onTool?: (event: {
+    /** 用工具调用自身的 id 配对起止事件；并行执行时按工具名配对会错位。 */
+    id: string;
+    name: string;
+    status: 'running' | 'done' | 'error';
+    args?: unknown;
+    result?: unknown;
+  }) => void;
   onPatch?: (patch: CandidatePatch) => void;
   onProgress?: (message: string) => void;
   onContext?: (summary: { includedFiles: number; totalFiles: number; chars: number }) => void;
@@ -215,11 +222,18 @@ export async function runProjectAgent(
       callbacks.onFinal?.(finalText);
       if (!hadStreamedText && !callbacks.onFinal) callbacks.onText?.(finalText);
     } else if (event.type === 'tool_execution_start') {
-      callbacks.onTool?.({ name: event.toolName, status: 'running' });
+      callbacks.onTool?.({
+        id: event.toolCallId,
+        name: event.toolName,
+        status: 'running',
+        args: event.args,
+      });
     } else if (event.type === 'tool_execution_end') {
       callbacks.onTool?.({
+        id: event.toolCallId,
         name: event.toolName,
         status: event.isError ? 'error' : 'done',
+        result: event.result,
       });
     }
   });

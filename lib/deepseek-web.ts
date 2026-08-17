@@ -351,7 +351,10 @@ export async function* streamDeepSeekWeb(
       if (settled) break;
       const now = Date.now();
       if (now - lastActivityAt > ASK_IDLE_TIMEOUT_MS) {
-        throw new Error('DeepSeek 连续 3 分钟没有产生新内容。可到网页查看是否卡在思考/联网。');
+        // 页面正在生成时 content script 会定期报活，所以走到这里意味着页面真的没动静。
+        throw new Error(
+          'DeepSeek 页面 3 分钟没有任何动静：既没有在生成，也没有新内容。请到聊天页确认是否卡在登录、风控或排队。',
+        );
       }
       if (now - startedAt > ASK_HARD_TIMEOUT_MS) {
         throw new Error('DeepSeek 单次回复超过 10 分钟，已停止等待。');
@@ -382,6 +385,5 @@ export function messagesToWebPrompt(messages: { role: string; content: string }[
   const system = messages.find((m) => m.role === 'system')?.content?.trim() ?? '';
   // 多轮追问通常只发最后一条 user;首轮带上 system
   if (users.length <= 1 && system && lastUser) return `${system}\n\n---\n\n${lastUser}`;
-  if (system && lastUser && users.length <= 1) return `${system}\n\n---\n\n${lastUser}`;
   return lastUser || system;
 }

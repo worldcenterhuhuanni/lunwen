@@ -295,6 +295,25 @@ export function allTemplates(custom: PromptTemplate[]): PromptTemplate[] {
   return [...BUILTIN_TEMPLATES, ...custom];
 }
 
+/**
+ * 追问时选哪个模板：本篇材料已锁定的优先，其次是用户当前的显式选择，
+ * 最后才按材料类型取全局默认。
+ *
+ * 中间那一层是给「从历史恢复的会话」用的：恢复后没有锁定引用，
+ * 但 selectedTemplateId 已被置成该会话记录的模板，不能让追问悄悄换成全局默认。
+ */
+export function resolveFollowupTemplate(
+  custom: PromptTemplate[],
+  locked: PromptTemplate | null,
+  selectedId: string,
+  scope: MaterialKind,
+  defaults: { pdf: string; html: string },
+): PromptTemplate {
+  if (locked) return locked;
+  const byType = scope === 'pdf' ? defaults.pdf : defaults.html;
+  return resolveTemplate(custom, selectedId !== 'auto' ? selectedId : byType, scope);
+}
+
 export function resolveTemplate(
   custom: PromptTemplate[],
   id: string | undefined,

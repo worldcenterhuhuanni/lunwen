@@ -86,6 +86,19 @@ export async function openReaderWindow(doc: {
   return id;
 }
 
+/**
+ * 打开原文对照视图。
+ * 未开启独立大窗口时用新标签页 —— 对照阅读要的是整屏宽度，侧栏内的窄弹框放不下。
+ */
+export async function openParallelReader(sessionId: string, preferLargeWindows: boolean) {
+  const path = `/reader.html?view=parallel&session=${encodeURIComponent(sessionId)}` as const;
+  if (preferLargeWindows) {
+    await openCenteredPopup(path, READER_SIZE);
+    return;
+  }
+  await browser.tabs.create({ url: extensionPageUrl(path), active: true });
+}
+
 /** 在独立大窗中审阅候选 diff，确认结果通过 runtime message 返回侧栏。 */
 export async function openPatchReviewWindow(patch: CandidatePatch) {
   const id = crypto.randomUUID();
